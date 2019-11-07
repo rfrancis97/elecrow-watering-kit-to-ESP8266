@@ -1,6 +1,6 @@
 /*******************/
 /** Add your wifi network name and password in lines 23 and 24 **/
-/** Add optional MQTT user name and pssword in lines 58 and 87 **/
+/** Add optional MQTT user name and password in lines 58 and 87 **/
 /** Add optional MQTT port# in line 75 **/
 /*******************/
 #include <SoftwareSerial.h>  //this is espSoftSerial, not Arduino SoftSerial
