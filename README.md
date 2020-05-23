@@ -7,3 +7,4 @@ Leonardo RX (Serial1) on 8-pin header should connect to ESP8266 RX pin. I used e
 Future enhancements to watch out for...
 1. Sending status of water valves and water pump.
 2. Turning on water valves and water pump from MQTT.
+3. Check reserve water tank level so as not to run pumps dry.
