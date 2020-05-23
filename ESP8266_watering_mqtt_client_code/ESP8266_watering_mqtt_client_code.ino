@@ -55,7 +55,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("espwateringClient", "<mqttuse>", "<mqtt password>")) {
+    if (client.connect("espwateringClient", "<mqttuser>", "<mqtt password>")) {
       Serial.println("connected");  
     } else {
       Serial.print("failed, rc=");
