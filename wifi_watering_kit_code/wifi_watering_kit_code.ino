@@ -44,12 +44,12 @@ int relay3_state_flag = 0;
 //relay4 state   1:open   0:close
 int relay4_state_flag = 0;
 
-//enable pump   true:enabled   false:disabled
+//enable pump   1 = enabled   0 = disabled
 int enable_pump = 1;
 
 //Measuring water level with ultrasonic sensor HC-SR04
-int trig = 1; 
-int echo = A4;
+int trig = 1;   //pin D7
+int echo = A4;  //pin A4
 
 static unsigned long currentMillis_send = 0;
 static unsigned long  Lasttime_send = 0;
@@ -202,11 +202,15 @@ void loop()
   
   // Calculating distance 
   h = t / 58;
-  h = h - 6;  // offset correction
+  h = h - 6;  // offset correction  (adjust as necessary for your water tank)
   h = 50 - h;  // water height, 0 - 50 cm
   hp = 2 * h;  // distance in %, 0-100 %
-  Serial.print(hp); 
-  Serial.print("\n");
+  if (hp < 0) {
+    enable_pump = 0;
+    }
+  else if (hp >= 0) {
+    enable_pump = 1;
+    }
    
   // read the value from the moisture sensors:
   read_value(); 
