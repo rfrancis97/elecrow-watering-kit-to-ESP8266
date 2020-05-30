@@ -169,6 +169,7 @@ void setup()
 void loop()
 { 
   char mqttData[1];   // buffer for MQTT data received (pump enabled) 
+  boolean newData = false;
   long t = 0, h = 0, hp = 0; //for Measuring water level
          
   /******** Check for MQTT message from ESP8266 ******************/
@@ -193,38 +194,24 @@ void loop()
   h = h - 6;  // offset correction (adjust as necessary for your water tank)
   h = 50 - h;  // water height, 0 - 50 cm
   hp = 2 * h;  // distance in %, 0-100 %
-  if (Serial1.available() != 0) {
-     mqttData[1] = Serial1.read(); // read next character
+  
+  if (Serial1.available() > 0) {
+     mqttData = Serial1.read(); // read next character
+     newData = true;
      }
-     if ((mqttData[1] == '1') && (hp >= 0)) {
-        enable_pump = 1;
-        }
-     else if ((mqttData[1] == '0') || (hp < 0)) {
-        enable_pump = 0;
-        }  
-
-  // read water level and shut off pump is too low
-  // Transmitting pulse
-  digitalWrite(trig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trig, LOW);
-  
-  // Waiting for pulse
-  t = pulseIn(echo, HIGH);
-  
-  // Calculating distance 
-  h = t / 58;
-  h = h - 6;  // offset correction  (adjust as necessary for your water tank)
-  h = 50 - h;  // water height, 0 - 50 cm
-  hp = 2 * h;  // distance in %, 0-100 %
-  if (hp < 0) {
-    enable_pump = 0;
-    }
-  else if (hp >= 0) {
-    enable_pump = 1;
-    }
+  else {
+     mqttData = '\0'; 
+     }
+  if (newData == true) {
+     //Serial.println(mqttData);
+     newData = false;
+     }    
+  if ((mqttData == '1') && (hp >= 0))  {
+     enable_pump = 1;                            
+     }
+  else if ((mqttData == '0') || (hp < 0)) {
+     enable_pump = 0;
+     }
    
   // read the value from the moisture sensors:
   read_value(); 
