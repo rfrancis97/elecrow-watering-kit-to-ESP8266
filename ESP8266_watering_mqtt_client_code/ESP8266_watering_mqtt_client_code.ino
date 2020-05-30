@@ -1,6 +1,6 @@
 /*******************/
 /** Add your wifi network name and password in lines 23 and 24 **/
-/** Add optional MQTT user name and password in lines 91 and 123 **/
+/** Add optional MQTT user name and password in lines 90 and 122 **/
 /** Add optional MQTT port# in line 109 **/
 /*******************/
 #include <SoftwareSerial.h>  //this is espSoftwareSerial, not Arduino SoftwareSerial
@@ -68,15 +68,14 @@ void callback(String topic, byte* message, unsigned int length) {
   if(topic=="Enable_Pump"){
      if(messageTemp == "1"){
         Serial.print("On");
-        waterSerial.print("1");
+        waterSerial.print('1');
      }
      else if(messageTemp == "0"){
         Serial.print("Off");
-        waterSerial.print("0");
+        waterSerial.print('0');
       }
    
   }
-  //waterSerial.print('\n');
   Serial.println(); 
 }
 
