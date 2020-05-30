@@ -177,17 +177,31 @@ void loop()
   /** "Set_Pump" from UI with payload FALSE **/
   /** The pump is automatically disabled if water tank level low **/
 
+  // read water level and shut off pump is too low
+  // Transmitting pulse
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  
+  // Waiting for pulse
+  t = pulseIn(echo, HIGH);
+  
+  // Calculating distance 
+  h = t / 58;
+  h = h - 6;  // offset correction (adjust as necessary for your water tank)
+  h = 50 - h;  // water height, 0 - 50 cm
+  hp = 2 * h;  // distance in %, 0-100 %
   if (Serial1.available() != 0) {
      mqttData[1] = Serial1.read(); // read next character
-     //mqttData[1] = ch;
      }
-     if (mqttData[1] == '1') {
+     if ((mqttData[1] == '1') && (hp >= 0)) {
         enable_pump = 1;
         }
-     else if (mqttData[1] == '0') {
+     else if ((mqttData[1] == '0') || (hp < 0)) {
         enable_pump = 0;
         }  
-     //Serial.print(enable_pump, DEC);
 
   // read water level and shut off pump is too low
   // Transmitting pulse
@@ -214,7 +228,9 @@ void loop()
    
   // read the value from the moisture sensors:
   read_value(); 
-  water_flower();  // use existing timer function or RTC to control watering
+  if (enable_pump == 1)  {
+     water_flower();  // use existing timer function or RTC to control watering
+     }
   int button_state = digitalRead(button);
   if (button_state == 1)
   {
@@ -296,7 +312,7 @@ void read_value()
   Serial1.print(",");
   Serial1.print(pump_state);
   Serial1.print("\n");
-  delay(10);
+  delay(2000);
   
   /* Optional - to display on Arduino serial monitor */
  /*
