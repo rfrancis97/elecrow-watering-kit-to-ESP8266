@@ -1,3 +1,4 @@
+/** Code for Elecrow Watering Kit Board **/
 #include <Wire.h>
 #include "U8glib.h"
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);    // I2C
