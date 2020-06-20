@@ -1,7 +1,8 @@
 /*******************/
-/** Add your wifi network name and password in lines 23 and 24 **/
-/** Add optional MQTT user name and password in lines 90 and 122 **/
-/** Add optional MQTT port# in line 109 **/
+/** Add your wifi network name and password in lines 20 and 21 **/
+/** Add your IP address in line 25 **/
+/** Add optional MQTT user name and password in lines 55 and 87 **/
+/** Add optional MQTT port# in line 74 **/
 /*******************/
 #include <SoftwareSerial.h>  //this is espSoftwareSerial, not Arduino SoftwareSerial
 #include <WiFiServerSecure.h>
@@ -14,17 +15,14 @@
 #include <WiFiServerSecure.h>
 #include <PubSubClient.h>
 
-
-SoftwareSerial waterSerial(14,12,false,256);  // RX, TX, inverse_logic, buffer size
-                                              //GPIO14 = D5, GPIO12 = D6
-                                 
+SoftwareSerial waterSerial;                                 
   
 // Change the credentials below, so your ESP8266 connects to your router
 const char* ssid = "xxxxxxxxxx";
-const char* password = "xxxxxxxxxx";
+const char* password = "xxxxxxxxxxxx";
 
 // Change the variable to your Raspberry Pi IP address, so it connects to your MQTT broker
-const char* mqtt_server = "xx.x.x.xxx";
+const char* mqtt_server = "<IP addresss>";
 
 // Initializes the espClient. You should change the espClient name if you have multiple ESPs running in your home automation system
 WiFiClient espwateringClient;
@@ -47,39 +45,6 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-// This functions is executed when some device publishes a message to a topic that your ESP8266 is subscribed to
-// Change the function below to add logic to your program, so when a device publishes a message to a topic that 
-// your ESP8266 is subscribed you can actually do something
-void callback(String topic, byte* message, unsigned int length) {
-  int i;
-
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.println();
-  Serial.print("Message: ");
-  String messageTemp;  
-  for (i = 0; i < length; i++) {                                                                                         
-    messageTemp += (char)message[i];
-  }
-  delay(10);
-  
-  // If an MQTT message is received 
- 
-  if(topic=="Enable_Pump"){
-     if(messageTemp == "1"){
-        Serial.print("On");
-        waterSerial.print('1');
-     }
-     else if(messageTemp == "0"){
-        Serial.print("Off");
-        waterSerial.print('0');
-      }
-   
-  }
-  Serial.println(); 
-}
-
-
 // This functions reconnects your ESP8266 to your MQTT broker
 // Change the function below if you want to subscribe to more topics with your ESP8266 
 void reconnect() {
@@ -87,10 +52,10 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("espwateringClient", "xxxxxxxxx", "xxxxxxxxx")) {
+    if (client.connect("espwateringClient", "<mqtt user>", "<password>")) {
       Serial.println("connected"); 
       // Subscribe or resubscribe to a topic
-      client.subscribe("Enable_Pump"); 
+      // client.subscribe("Enable_Pump"); 
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -102,31 +67,32 @@ void reconnect() {
 }  
   
 void setup() {
-  waterSerial.begin(9600);
-  Serial.begin(9600);
+  waterSerial.begin(19200,SWSERIAL_8N1,14,12,false,256); // bitrate, config, RX, TX, inverse_logic, buffer size
+                                                        //GPIO14 = D5, GPIO12 = D6
+  Serial.begin(19200);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  //client.setCallback(callback);
 }
 
 void loop()
 {
-  
-   char waterData[80];  // max line length is one less than this
-   
+   char waterData[80];  // max line length is one less than this 
+ 
    if (!client.connected()) {
     reconnect();
   }
   
   if(!client.loop())
-    client.connect("espwateringClient", "xxxxxxxx", "xxxxxxxxxx");
-
+    client.connect("espwateringClient", "mqttuser", "Miniak03");
+   
   //where to store the data 
     static char read_A0[5]; 
     static char read_A1[5];
     static char read_A2[5];
     static char read_A3[5];
-    static char read_pump[2];  
+    static char read_pump_status[2];
+    static char waterLevel[2];
   
 //  get data from serial line
   
@@ -136,7 +102,7 @@ void loop()
       }
      
   String myString = waterData; //change type from char to string
-  //Serial.println (myString);
+  //String myPumpString(pumpEnable_Disable);
 
 // This parses comma delimited string into substring
 int Index1 = myString.indexOf(',');
@@ -144,22 +110,26 @@ int Index2 = myString.indexOf(',', Index1+1);
 int Index3 = myString.indexOf(',', Index2+1);
 int Index4 = myString.indexOf(',', Index3+1);
 int Index5 = myString.indexOf(',', Index4+1);
+int Index6 = myString.indexOf(',', Index5+1);
 
 String firstValue = myString.substring(0, Index1);
 String secondValue = myString.substring(Index1+1, Index2);
 String thirdValue = myString.substring(Index2+1, Index3);  
 String fourthValue = myString.substring(Index3+1, Index4); 
 String fifthValue = myString.substring(Index4+1, Index5);
+String sixthValue = myString.substring(Index5+1, Index6);
 
 firstValue.toCharArray(read_A0, 5);   //convert back to 'char' for PubSub
 secondValue.toCharArray(read_A1, 5);
 thirdValue.toCharArray(read_A2, 5);
 fourthValue.toCharArray(read_A3, 5);
-fifthValue.toCharArray(read_pump, 2);
+fifthValue.toCharArray(read_pump_status, 2);
+sixthValue.toCharArray(waterLevel, 2);
 
-//to print results to serial monitor
+
+//optional - to print results to serial monitor
+
 delay (100);
-
 Serial.println("Readings:");
 Serial.print("A0: ");
 Serial.println(firstValue);
@@ -169,23 +139,19 @@ Serial.print("A2: ");
 Serial.println(thirdValue);
 Serial.print("A3: ");
 Serial.println(fourthValue);
-Serial.print("Pump State: ");
-if (fifthValue = '0') {
-   Serial.println("Off");
-   }
-else {
-   Serial.println("On");
-   } 
-Serial.println("");
-
+Serial.print("Pump Running: ");
+Serial.println(fifthValue);
+Serial.print("Water Level: ");
+Serial.println(sixthValue);
+Serial.println();
 
 //publish to mqtt
 client.publish("A0_moisture", read_A0);
 client.publish("A1_moisture", read_A1);
 client.publish("A2_moisture", read_A2);
 client.publish("A3_moisture", read_A3);
-client.publish("Pump State", read_pump); 
-
+client.publish("Pump_State", read_pump_status);
+client.publish("Water_Level", waterLevel); 
 }
 
       
