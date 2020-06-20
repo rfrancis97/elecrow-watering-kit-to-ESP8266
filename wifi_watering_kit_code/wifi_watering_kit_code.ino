@@ -23,7 +23,7 @@ int relay2 = 8;
 int relay3 = 9;
 int relay4 = 10;
 
-// set water pump
+// set water pump 
 int pump = 4;
 
 // set button
@@ -31,6 +31,9 @@ int button = 12;
 
 //pump state    1:open   0:close
 int pump_state_flag = 0;
+
+//water level    1:high   0:low
+int water_level_flag = 0;
 
 //relay1 state    1:open   0:close
 int relay1_state_flag = 0;
@@ -50,6 +53,8 @@ int enable_pump = 1;
 //Measuring water level with ultrasonic sensor HC-SR04
 int trig = 1;   //pin D7
 int echo = A4;  //pin A4
+
+int counter = 0; //counter for output frequency to ESP
 
 static unsigned long currentMillis_send = 0;
 static unsigned long  Lasttime_send = 0;
@@ -142,15 +147,17 @@ static unsigned char bitmap_H[] U8G_PROGMEM = {
   0xE0, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-
 void setup()
 {
   draw_elecrow();
   delay(2000);
   Wire.begin();
   RTC.begin();
-  Serial.begin(9600);
-  Serial1.begin(9600); // Serial to ESP8266. Use RX & TX pins of Elecrow relay board
+  Serial.begin(19200);
+  while (!Serial) { }
+  Serial1.begin(19200); // Serial to ESP8266. Use RX & TX pins of Elecrow relay board
+  while (!Serial1) { }
+  //Ultrasonic sensor
   pinMode(trig, OUTPUT);
   pinMode(echo, INPUT);
   // declare relay as output
@@ -168,18 +175,12 @@ void setup()
 
 void loop()
 { 
-  char mqttData[1];   // buffer for MQTT data received (pump enabled) 
-  boolean newData = false;
   long t = 0, h = 0, hp = 0; //for Measuring water level
-         
-  /******** Check for MQTT message from ESP8266 ******************/
-  /** You can disable the pump by setting enable_pump FALSE **/
-  /** The pump can also be disabled remotely by sending mqtt topic **/
-  /** "Set_Pump" from UI with payload FALSE **/
+   
   /** The pump is automatically disabled if water tank level low **/
-
   // read water level and shut off pump is too low
   // Transmitting pulse
+
   digitalWrite(trig, LOW);
   delayMicroseconds(2);
   digitalWrite(trig, HIGH);
@@ -194,30 +195,18 @@ void loop()
   h = h - 6;  // offset correction (adjust as necessary for your water tank)
   h = 50 - h;  // water height, 0 - 50 cm
   hp = 2 * h;  // distance in %, 0-100 %
-  
-  if (Serial1.available() > 0) {
-     mqttData = Serial1.read(); // read next character
-     newData = true;
-     }
-  else {
-     mqttData = '\0'; 
-     }
-  if (newData == true) {
-     //Serial.println(mqttData);
-     newData = false;
-     }    
-  if ((mqttData == '1') && (hp >= 0))  {
-     enable_pump = 1;                            
-     }
-  else if ((mqttData == '0') || (hp < 0)) {
-     enable_pump = 0;
-     }
-   
-  // read the value from the moisture sensors:
+
+  //check pump reservoir water level 
+  if (hp >= 0)  {       
+        enable_pump = 1;
+        water_level_flag = 1;                        
+        }
+  else if (hp < 0)  {
+        enable_pump = 0;
+        water_level_flag = 0;
+        }      
   read_value(); 
-  if (enable_pump == 1)  {
-     water_flower();  // use existing timer function or RTC to control watering
-     }
+  water_flower();
   int button_state = digitalRead(button);
   if (button_state == 1)
   {
@@ -239,7 +228,7 @@ void loop()
     } while (u8g.nextPage());
   }
 }
-  
+
 
 //Set moisture value
 void read_value()
@@ -276,55 +265,66 @@ void read_value()
   if(moisture4_value<0) {
     moisture4_value=0;
   }
-  static char A0_sensor[5]; 
-  static char A1_sensor[5];
-  static char A2_sensor[5];
-  static char A3_sensor[5];
-  static char pump_state[2];
-
-  dtostrf(moisture1_value, 4, 0, A0_sensor);
-  dtostrf(moisture2_value, 4, 0, A1_sensor);
-  dtostrf(moisture3_value, 4, 0, A2_sensor);
-  dtostrf(moisture4_value, 4, 0, A3_sensor);
-  dtostrf(pump_state_flag, 1, 0, pump_state);
-
-  /*********Output Moisture Sensor values to ESP8266******/
-  Serial1.print(A0_sensor);
-  Serial1.print(",");
-  Serial1.print(A1_sensor);
-  Serial1.print(",");
-  Serial1.print(A2_sensor);
-  Serial1.print(",");
-  Serial1.print(A3_sensor);
-  Serial1.print(",");
-  Serial1.print(pump_state);
-  Serial1.print("\n");
-  delay(2000);
+  if (counter >= 470) {       //output frequency to ESP, 470 = approx 1 minute
+     static char A0_sensor[5]; 
+     static char A1_sensor[5];
+     static char A2_sensor[5];
+     static char A3_sensor[5];
+     static char pump_state[2];
+     static char water_level[2];
   
-  /* Optional - to display on Arduino serial monitor */
- /*
-  Serial.print("A0: ");
-  Serial.print(A0_sensor);
-  Serial.print(", ");
-  Serial.print("A1: ");
-  Serial.print(A1_sensor);
-  Serial.print(", ");
-  Serial.print("A2: ");
-  Serial.print(A2_sensor);
-  Serial.print(", ");
-  Serial.print("A3: ");
-  Serial.print(A3_sensor);
-  Serial.print(", ");
-  Serial.print("A3: ");
-  Serial.print("Pump: ");
-  Serial.print(pump_state);
-  Serial.println();
-  delay(10);  
-  */
+     dtostrf(moisture1_value, 4, 0, A0_sensor);
+     dtostrf(moisture2_value, 4, 0, A1_sensor);
+     dtostrf(moisture3_value, 4, 0, A2_sensor);
+     dtostrf(moisture4_value, 4, 0, A3_sensor);
+     dtostrf(pump_state_flag, 1, 0, pump_state);
+     dtostrf(water_level_flag, 1, 0, water_level);
+
+     /*********Output Moisture Sensor values to ESP8266******/
+     Serial1.print(A0_sensor);
+     Serial1.print(",");
+     Serial1.print(A1_sensor);
+     Serial1.print(",");
+     Serial1.print(A2_sensor);
+     Serial1.print(",");
+     Serial1.print(A3_sensor);
+     Serial1.print(",");
+     Serial1.print(pump_state);
+     Serial1.print(",");
+     Serial1.print(water_level);
+     Serial1.print("\n");
+     delay(100);
+     counter = 0;
+  
+     /* Optional - to display on Arduino serial monitor */
+/*
+     Serial.print("A0: ");
+     Serial.print(A0_sensor);
+     Serial.print(", ");
+     Serial.print("A1: ");
+     Serial.print(A1_sensor);
+     Serial.print(", ");
+     Serial.print("A2: ");
+     Serial.print(A2_sensor);
+     Serial.print(", ");
+     Serial.print("A3: ");
+     Serial.print(A3_sensor);
+     Serial.print(", ");
+     Serial.print("Pump: ");
+     Serial.print(pump_state);
+     Serial.print(", ");
+     Serial.print("Water Level: ");
+     Serial.print(water_level);
+     Serial.println();
+     delay(50); 
+*/     
  }
+ counter++;
+}
  
 void water_flower()
 {
+    
   if (moisture1_value < 30)
   {
     digitalWrite(relay1, HIGH);
@@ -336,7 +336,9 @@ void water_flower()
       pump_state_flag = 1;
       delay(50);
     }
+    
   }
+    
   else if (moisture1_value > 55)
   {
     digitalWrite(relay1, LOW);
@@ -428,8 +430,7 @@ void water_flower()
 }
 
 
-
-  void draw_elecrow(void){
+void draw_elecrow(void){
 
   u8g.setFont(u8g_font_gdr9r);
   u8g.drawStr(8,55 , "www.elecrow.com");
