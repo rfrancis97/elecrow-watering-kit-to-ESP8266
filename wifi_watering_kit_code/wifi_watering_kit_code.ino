@@ -17,6 +17,7 @@ int moisture1_value = 0;
 int moisture2_value = 0;
 int moisture3_value = 0;
 int moisture4_value = 0;
+int water_level_value = 0;
 
 // set water relays
 int relay1 = 6;
@@ -32,9 +33,6 @@ int button = 12;
 
 //pump state    1:open   0:close
 int pump_state_flag = 0;
-
-//water level    1:high   0:low
-int water_level_flag = 0;
 
 //relay1 state    1:open   0:close
 int relay1_state_flag = 0;
@@ -198,14 +196,17 @@ void loop()
   hp = 2 * h;  // distance in %, 0-100 %
 
   //check pump reservoir water level 
-  if (hp >= 0)  {       
-        enable_pump = 1;
-        water_level_flag = 1;                        
+  water_level_value = hp; 
+  delay(20);
+  if(water_level_value<0){
+    water_level_value=0;
+  } 
+  if (water_level_value >= 0)  {       
+        enable_pump = 1;                      
         }
-  else if (hp < 0)  {
+  else if (water_level_value < 0)  {
         enable_pump = 0;
-        water_level_flag = 0;
-        }      
+        }             
   read_value(); 
   water_flower();
   int button_state = digitalRead(button);
@@ -272,14 +273,14 @@ void read_value()
      static char A2_sensor[5];
      static char A3_sensor[5];
      static char pump_state[2];
-     static char water_level[2];
+     static char water_level_value[5];
   
      dtostrf(moisture1_value, 4, 0, A0_sensor);
      dtostrf(moisture2_value, 4, 0, A1_sensor);
      dtostrf(moisture3_value, 4, 0, A2_sensor);
      dtostrf(moisture4_value, 4, 0, A3_sensor);
      dtostrf(pump_state_flag, 1, 0, pump_state);
-     dtostrf(water_level_flag, 1, 0, water_level);
+     dtostrf(water_level_value, 4, 0, water_level);
 
      /*********Output Moisture Sensor values to ESP8266******/
      Serial1.print(A0_sensor);
