@@ -92,7 +92,7 @@ void loop()
     static char read_A2[5];
     static char read_A3[5];
     static char read_pump_status[2];
-    static char waterLevel[2];
+    static char waterLevel[5];
   
 //  get data from serial line
   
@@ -124,7 +124,7 @@ secondValue.toCharArray(read_A1, 5);
 thirdValue.toCharArray(read_A2, 5);
 fourthValue.toCharArray(read_A3, 5);
 fifthValue.toCharArray(read_pump_status, 2);
-sixthValue.toCharArray(waterLevel, 2);
+sixthValue.toCharArray(waterLevel, 5);
 
 
 //optional - to print results to serial monitor
